@@ -15,10 +15,6 @@ on:
         description: 'OS_TYPE'
         required: true
         default: 'miui'
-      SGSI_TYPE:
-        description: 'SGSI_TYPE(AB, A, or BOTH)'
-        required: true
-        default: 'AB'
       REPACK_NAME:
         description: 'REPACK_NAME'
         required: true
@@ -72,17 +68,10 @@ jobs:
           java -version
 
       - name: Make AB type GSI‌‌...
-        if: ${{ github.event.inputs.SGSI_TYPE }} == 'AB' || ${{ github.event.inputs.SGSI_TYPE }} == 'BOTH'
         run: |
-          sudo bash $GITHUB_WORKSPACE/SGSI-build-tool-12/make.sh AB << EOF
-          ${{ github.event.inputs.ZIP_NAME }}
-          y
-          y
-          ${{ github.event.inputs.OS_TYPE }}
-          y
+          ./SGSI.sh --ab ${{ github.event.inputs.OS_TYPE }} --fix-bug
 
       - name: Packing(AB)...
-        if: ${{ github.event.inputs.SGSI_TYPE }} == 'AB' || ${{ github.event.inputs.SGSI_TYPE }} == 'BOTH'
         run: |
           cd $GITHUB_WORKSPACE/SGSI-build-tool-12
           pwd
@@ -103,7 +92,7 @@ jobs:
       - name: Upload to Release‌‌...
         uses: ncipollo/release-action@v1.8.0
         with:
-          artifacts: "${{ github.workspace }}/SGSI-build-tool-12/upload_ab/*,${{ github.workspace }}/Tool-SGSI-build/upload_aonly/*"
+          artifacts: "${{ github.workspace }}/SGSI-build-tool-12/upload_ab/*"
           tag: "${{ github.event.inputs.REPACK_NAME }}_${{ env.BUILD_TIME }}"
           bodyFile: "${{ github.workspace }}/SGSI-build-tool-12/SGSI/build_info.txt"
           token: ${{ secrets.GITHUB_TOKEN }}
