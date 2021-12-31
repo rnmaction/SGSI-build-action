@@ -1,83 +1,109 @@
 name: SGSI_Build
 
+on:
+  workflow_dispatch:
+    inputs:
+      ROM_URL:
+        description: 'ROM_URL'
+        required: true
+        default: 'https://bigota.d.miui.com/21.12.27/miui_CAMELLIAPRE_21.12.27_867cf9f480_12.0.zip'
+      ZIP_NAME:
+        description: 'ZIP_NAME'
+        required: true
+        default: 'miui_CAMELLIAPRE_21.12.27_867cf9f480_12.0.zip'
+      OS_TYPE:
+        description: 'OS_TYPE'
+        required: true
+        default: 'miui'
+      SGSI_TYPE:
+        description: 'SGSI_TYPE(AB, A, or BOTH)'
+        required: true
+        default: 'AB'
+      REPACK_NAME:
+        description: 'REPACK_NAME'
+        required: true
+        default: 'SGSI.zip'
+
+
+
 
 jobs:
   build:
     runs-on: ubuntu-20.04
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Get the source code of this repositorie...
+        uses: actions/checkout@main
 
-      - name: Load Configuration
-        uses: falti/dotenv-action@v0.2.5
-        id: config
-        with:
-          path: config.env
+      - name: Get variable configuration...
+        run: |
+          echo "BUILD_TIME=$(date +%s | md5sum | awk '{print substr($1,1,10)}')" >> $GITHUB_ENV
 
-      - name: Check Configuration
+      - name: Clean up the environment‌‌...
         run: |
-          function required () { if ! [[ "$1" ]]; then echo "$2 variable can't be null." && exit 1; fi }
-          required "${{ steps.config.outputs.rom_url }}" "ROM_URL config"
-          required "${{ steps.config.outputs.build_type }}" "BUILD_TYPE config"
-          required "${{ steps.config.outputs.os_type }}" "OS_TYPE config"
-          required "${{ steps.config.outputs.zip_name }}" "ZIP_NAME config"
-          required "${{ steps.config.outputs.version }}" "VERSION config"
-          required "${{ steps.config.outputs.repack_name }}" "REPACK_NAME config"
+          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
+          sudo -E apt-get update
+          sudo -E apt-get clean
 
-      - name: Cleanup workspace
-        uses: rokibhasansagar/slimhub_actions@main
-           
-      - name: Initializing Environment
+      - name: Configuration Environment‌‌...
         run: |
-            sudo apt-get install -y git wget git zip unzip curl axel
+          sudo apt-get install -y git wget git zip unzip curl axel
 
-      - name: Cloning SGSI source code
+      - name: Get the SGSI tool‌‌...
         run: |
-             git clone --recurse-submodules https://github.com/xiaoxindada/SGSI-build-tool.git -b 12 $GITHUB_WORKSPACE/SGSI-build-tool
-           
-      - name: Download ROM
-        run: |
-            cd $GITHUB_WORKSPACE/SGSI-build-tool
-            mkdir ./tmp
-            wget -U "Mozilla/5.0" "${{ steps.config.outputs.rom_url }}" -O "$GITHUB_WORKSPACE/SGSI-build-tool/tmp/"${{ steps.config.outputs.zip_name }}"
-            echo "zip_file: $(ls "$GITHUB_WORKSPACE/SGSI-build-tool/tmp/")"
-            
-      - name: Setup sGSI tools requirements
-        run: |
-            sudo sed -i 's/USE_MIRROR_FOR_PIP\=true/USE_MIRROR_FOR_PIP\=false/' $GITHUB_WORKSPACE/SGSI-build-tool/setup.sh
-            sudo bash $GITHUB_WORKSPACE/SGSI-build-tool/setup.sh
-            # sudo apt-get -y --purge remove "adoptopenjdk-11-hotspot"
-            java -version
-            
-      - name: Build AB Devices
-        if: "${{ steps.config.outputs.build_type == 'AB' }}"
-        run: |
-            sudo bash $GITHUB_WORKSPACE/SGSI-build-tool/make.sh --AB "${{ steps.config.outputs.os_type }}" "${{ steps.config.outputs.zip_name }}" --fix-bug
+          git clone --recurse-submodules https://github.com/xiaoxindada/SGSI-build-tool.git -b 12 $GITHUB_WORKSPACE/SGSI-build-tool-12
 
-      - name: Build Aonly Devices
-        if: "${{ steps.config.outputs.build_type == 'a-only' }}"
+      - name: Replace custom condensed content...
         run: |
-            sudo bash $GITHUB_WORKSPACE/SGSI-build-tool/make.sh --a-only "${{ steps.config.outputs.os_type }}" "${{ steps.config.outputs.zip_name }}" --fix-bug     
+          sudo chmod 777 -R $GITHUB_WORKSPACE/SGSI-build-tool-12
 
-      - name: Repack Output File
-        run: |            
-           cd $GITHUB_WORKSPACE/SGSI-build-tool
-           pwd
-           mkdir -p upload
-           zip -r "${{ steps.config.outputs.repack_name }}" ./SGSI/*
-           if [[ $(du -sb ""${{ steps.config.outputs.repack_name }}"" | awk '{print $1}') -gt 2097152000 ]];then
-               echo -e "split packaging..."
-               tar -cpzf - "${{ steps.config.outputs.repack_name }}" | split -d -b 1024m - "upload/"${{ steps.config.outputs.repack_name }}"
-           else
-               mv "${{ steps.config.outputs.repack_name }}" upload/"${{ steps.config.outputs.repack_name }}"
-           fi
-           ls "upload"
-   
-      - name: Upload to Release...
+      - name: Download ROM‌‌...
+        run: |
+          cd $GITHUB_WORKSPACE/SGSI-build-tool-12
+          mkdir ./tmp
+          wget -U "Mozilla/5.0" ${{ github.event.inputs.ROM_URL }} -O "$GITHUB_WORKSPACE/SGSI-build-tool-12/tmp/${{ github.event.inputs.ZIP_NAME }}"
+          echo "zip_file: $(ls "$GITHUB_WORKSPACE/SGSI-build-tool-12/tmp/")"
+
+      - name: Configuration tool environment...
+        run: |
+          sudo sed -i 's/USE_MIRROR_FOR_PIP\=true/USE_MIRROR_FOR_PIP\=false/' $GITHUB_WORKSPACE/SGSI-build-tool-12/setup.sh
+          sudo bash $GITHUB_WORKSPACE/SGSI-build-tool-12/setup.sh
+          sudo apt-get -y --purge remove "adoptopenjdk-11-hotspot"
+          java -version
+
+      - name: Make AB type GSI‌‌...
+        if: ${{ github.event.inputs.SGSI_TYPE }} == 'AB' || ${{ github.event.inputs.SGSI_TYPE }} == 'BOTH'
+        run: |
+          sudo bash $GITHUB_WORKSPACE/SGSI-build-tool-12/make.sh AB << EOF
+          ${{ github.event.inputs.ZIP_NAME }}
+          y
+          y
+          ${{ github.event.inputs.OS_TYPE }}
+          y
+
+      - name: Packing(AB)...
+        if: ${{ github.event.inputs.SGSI_TYPE }} == 'AB' || ${{ github.event.inputs.SGSI_TYPE }} == 'BOTH'
+        run: |
+          cd $GITHUB_WORKSPACE/SGSI-build-tool-12
+          pwd
+          zip -r AB_${{ github.event.inputs.REPACK_NAME }} SGSI/*
+          ls "AB_${{ github.event.inputs.REPACK_NAME }}"
+          echo "--------------------------------------"
+          ls
+          echo "--------------------------------------"
+          mkdir upload_ab
+          echo "--------------------------------------"
+          ls upload_ab
+          echo "--------------------------------------"
+          if [ $(ls -l AB_${{ github.event.inputs.REPACK_NAME }} | awk '{print $5}') -gt 2147483647 ]; then tar cvzpf - AB_${{ github.event.inputs.REPACK_NAME }} | split -d -b 1024m - upload_ab/AB_${{ github.event.inputs.REPACK_NAME }}; else mv AB_${{ github.event.inputs.REPACK_NAME }} upload_ab/AB_${{ github.event.inputs.REPACK_NAME }}; fi
+          echo "--------------------------------------"
+          ls upload_ab
+          echo "--------------------------------------"
+
+      - name: Upload to Release‌‌...
         uses: ncipollo/release-action@v1.8.0
-          with:
-            artifacts: "${{ github.workspace }}/Tool-SGSI-build/upload_ab/*,${{ github.workspace }}/Tool-SGSI-build/upload_aonly/*"
-            tag: "${{ github.event.inputs.REPACK_NAME }}_${{ env.BUILD_TIME }}"
-            bodyFile: "${{ github.workspace }}/Tool-SGSI-build/SGSI/build_info.txt"
-            token: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          artifacts: "${{ github.workspace }}/SGSI-build-tool-12/upload_ab/*,${{ github.workspace }}/Tool-SGSI-build/upload_aonly/*"
+          tag: "${{ github.event.inputs.REPACK_NAME }}_${{ env.BUILD_TIME }}"
+          bodyFile: "${{ github.workspace }}/SGSI-build-tool-12/SGSI/build_info.txt"
+          token: ${{ secrets.GITHUB_TOKEN }}
