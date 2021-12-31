@@ -1,7 +1,5 @@
 name: SGSI_Build
 
-on:
-  workflow_dispatch:
 
 jobs:
   build:
@@ -64,23 +62,22 @@ jobs:
 
       - name: Repack Output File
         run: |            
-             cd $GITHUB_WORKSPACE/SGSI-build-tool
-             pwd
-             mkdir -p upload
-             zip -r "${{ steps.config.outputs.repack_name }}" ./SGSI/*
-             if [[ $(du -sb ""${{ steps.config.outputs.repack_name }}"" | awk '{print $1}') -gt 2097152000 ]];then
-                 echo -e "split packaging..."
-                 tar -cpzf - "${{ steps.config.outputs.repack_name }}" | split -d -b 1024m - "upload/"${{ steps.config.outputs.repack_name }}"
-             else
-                 mv "${{ steps.config.outputs.repack_name }}" upload/"${{ steps.config.outputs.repack_name }}"
-             fi
-             ls "upload"
-
-     - name: Upload SGSI to GH-Release
-       uses: ncipollo/release-action@v1.8.6
-       with:
-         artifacts: ${{ github.workspace }}/SGSI-build-tool/upload/*
-         name: "${{ steps.config.outputs.os_type }}"${{ steps.config.outputs.build_type }}"-Android"${{ steps.config.outputs.version }}"-unpack
-         tag: "${{ steps.config.outputs.os_type }}"${{ steps.config.outputs.build_type }}"-"${{ steps.config.outputs.version }}"-${{ github.run_number }}
-         bodyFile: "${{ github.workspace}}/SGSI-build-tool/SGSI/build_info.txt"
-         token: ${{ secrets.GITHUB_TOKEN }}
+           cd $GITHUB_WORKSPACE/SGSI-build-tool
+           pwd
+           mkdir -p upload
+           zip -r "${{ steps.config.outputs.repack_name }}" ./SGSI/*
+           if [[ $(du -sb ""${{ steps.config.outputs.repack_name }}"" | awk '{print $1}') -gt 2097152000 ]];then
+               echo -e "split packaging..."
+               tar -cpzf - "${{ steps.config.outputs.repack_name }}" | split -d -b 1024m - "upload/"${{ steps.config.outputs.repack_name }}"
+           else
+               mv "${{ steps.config.outputs.repack_name }}" upload/"${{ steps.config.outputs.repack_name }}"
+           fi
+           ls "upload"
+   
+      - name: Upload to Release...
+        uses: ncipollo/release-action@v1.8.0
+          with:
+            artifacts: "${{ github.workspace }}/Tool-SGSI-build/upload_ab/*,${{ github.workspace }}/Tool-SGSI-build/upload_aonly/*"
+            tag: "${{ github.event.inputs.REPACK_NAME }}_${{ env.BUILD_TIME }}"
+            bodyFile: "${{ github.workspace }}/Tool-SGSI-build/SGSI/build_info.txt"
+            token: ${{ secrets.GITHUB_TOKEN }}
