@@ -69,7 +69,7 @@ jobs:
 
       - name: Make AB type GSI‌‌...
         run: |
-          ./SGSI.sh --ab ${{ github.event.inputs.OS_TYPE }} --fix-bug
+          sudo bash $GITHUB_WORKSPACE/SGSI-build-tool-12/SGSI.sh --ab ${{ github.event.inputs.OS_TYPE }} --fix-bug
 
       - name: Packing(AB)...
         run: |
